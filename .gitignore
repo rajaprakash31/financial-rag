@@ -157,6 +157,9 @@ ENV/
 env.bak/
 venv.bak/
 
+data/
+indexes/
+
 # Spyder project settings
 .spyderproject
 .spyproject

@@ -1,0 +1,12 @@
+requests>=2.30.0
+beautifulsoup4>=4.12.0
+sentence-transformers>=2.2.2
+faiss-cpu>=1.7.4
+numpy>=1.26.0
+torch>=2.0.0
+llama-cpp-python>=0.2.0
+python-dotenv>=1.0.0
+
+# Optional: Chroma for alternative vector database
+chromadb>=0.3.21
+
