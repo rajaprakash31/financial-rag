@@ -19,6 +19,7 @@ def build_prompt(query: str, passages: list[str]) -> str:
     for i, passage in enumerate(passages, 1):
         prompt += f"[Document {i}] {passage}\n\n"
     prompt += f"Question: {query}\nAnswer:"
+    print(prompt)
     return prompt
 
 
@@ -105,9 +106,11 @@ def query_rag(
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Query the local Investopedia RAG index.")
+    parser = argparse.ArgumentParser(description="Query a local named RAG index.")
     parser.add_argument("--query", required=True, help="Question to ask.")
-    parser.add_argument("--index-dir", default="indexes", help="Directory containing the index.")
+    parser.add_argument("--index-root", default="indexes", help="Root directory containing named indexes.")
+    parser.add_argument("--index-name", default="default", help="Name of the index to query.")
+    parser.add_argument("--index-dir", default=None, help="Direct index directory path (optional).")
     parser.add_argument("--model", default="all-MiniLM-L6-v2", help="SentenceTransformer model name for query embeddings.")
     parser.add_argument("--backend", default="faiss", choices=["faiss", "chroma"],
                         help="Vector database backend to use.")
@@ -115,7 +118,11 @@ def main() -> None:
     parser.add_argument("--llm-model", default=None, help="Path to a local llama.cpp model file for generation.")
     args = parser.parse_args()
 
-    index_dir = Path(args.index_dir)
+    if args.index_dir:
+        index_dir = Path(args.index_dir)
+    else:
+        index_dir = Path(args.index_root) / args.index_name
+
     if not index_dir.exists():
         raise SystemExit(f"Index directory not found at {index_dir}. Run build_index.py first.")
 

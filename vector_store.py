@@ -153,7 +153,15 @@ class ChromaVectorStore(VectorStore):
 
         # Prepare documents and metadatas
         documents = [item["text"] for item in metadata]
-        metadatas = [{"source": item["source"], "chunk_id": str(item["chunk_id"])} for item in metadata]
+        metadatas = []
+        for item in metadata:
+            meta_item = {
+                "source": item["source"],
+                "chunk_id": str(item["chunk_id"]),
+            }
+            if "chunk_hash" in item:
+                meta_item["chunk_hash"] = item["chunk_hash"]
+            metadatas.append(meta_item)
 
         self.collection.add(
             ids=ids,
@@ -199,11 +207,14 @@ class ChromaVectorStore(VectorStore):
         all_items = self.collection.get()
         metadata = []
         for doc, meta in zip(all_items["documents"], all_items["metadatas"]):
-            metadata.append({
+            item = {
                 "text": doc,
                 "source": meta["source"],
                 "chunk_id": int(meta["chunk_id"]),
-            })
+            }
+            if "chunk_hash" in meta:
+                item["chunk_hash"] = meta["chunk_hash"]
+            metadata.append(item)
         return metadata
 
 

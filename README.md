@@ -16,14 +16,17 @@ A local **Retrieval-Augmented Generation (RAG)** system for finance research run
 ```
 financial-rag/
 ├── embeddings.py           # Embeddings manager and caching
+├── index_registry.py       # Load named index manifests
+├── orchestrator.py         # Route queries to the best index
 ├── vector_store.py         # Vector database abstraction (FAISS/Chroma)
 ├── build_index.py          # Create embeddings and index
-├── query_rag.py            # Search and retrieve
+├── update_index.py         # Incrementally append new documents into an index
+├── query_rag.py            # Search and retrieve a single index
 ├── scrape_investopedia.py  # Scrape web content
 ├── requirements.txt        # Python dependencies
 ├── models/                 # Cached embedding models
 ├── data/                   # Scraped documents
-└── indexes/                # Vector indexes
+└── indexes/                # Named vector indexes
 ```
 
 ## Setup (macOS)
@@ -69,11 +72,14 @@ Articles are saved as `.txt` files in `data/`.
 ### Step 2: Build Embeddings & Vector Index
 
 ```bash
-# Using FAISS (default, faster)
-python build_index.py --data-dir data --index-dir indexes --backend faiss
+# Create a named index under indexes/default
+python build_index.py --data-dir data --index-root indexes --index-name default --backend faiss
 
-# Or using Chroma (persistent, queryable)
-python build_index.py --data-dir data --index-dir indexes --backend chroma
+# Or create a second index for a different use case
+python build_index.py --data-dir data --index-root indexes --index-name investopedia_equity --backend faiss --description "Investopedia equity terms" --tags finance,equity --use-cases "definitions,valuation"
+
+# Or use Chroma instead of FAISS
+python build_index.py --data-dir data --index-root indexes --index-name default --backend chroma
 ```
 
 This:
@@ -82,21 +88,44 @@ This:
 3. Builds a vector index for fast retrieval
 4. Saves embeddings config and metadata
 
-### Step 3: Query the RAG System
+### Step 3: Incrementally update the index
 
 ```bash
-# Basic retrieval
-python query_rag.py --query "What is the difference between stocks and bonds?"
+# Add new documents in data/ to the existing named index
+python update_index.py --data-dir data --index-root indexes --index-name default --backend faiss
+```
+
+The script also performs deduplication by hashing each text chunk. Identical chunk text is skipped, while new or modified text is embedded and appended.
+
+If you want to update a different named index:
+
+```bash
+python update_index.py --data-dir new_data --index-root indexes --index-name investopedia_equity --backend faiss
+```
+
+### Step 4: Query a single named index
+
+```bash
+# Basic retrieval from a named index
+python query_rag.py --query "What is the difference between stocks and bonds?" --index-root indexes --index-name default
 
 # With top-k results
-python query_rag.py --query "What is ROI?" --top-k 5
+python query_rag.py --query "What is ROI?" --index-root indexes --index-name default --top-k 5
 
-# Using Chroma backend
-python query_rag.py --query "Define dividend" --backend chroma
+# Using a different named index
+python query_rag.py --query "Define dividend" --index-root indexes --index-name investopedia_equity
 
 # With local LLM for answer generation
-python query_rag.py --query "What is ROI?" --llm-model /path/to/model.gguf
+python query_rag.py --query "What is ROI?" --index-root indexes --index-name default --llm-model /path/to/model.gguf
 ```
+
+### Step 5: Use the orchestrator to route queries
+
+```bash
+python orchestrator.py --query "What is equity?" --index-root indexes
+```
+
+This will read each index's manifest and documentation, select the best matched index for the query, and run retrieval against that index.
 
 ## Configuration
 
@@ -188,6 +217,18 @@ User Query
     ↓
 Answer
 ```
+
+## Framework Diagram
+
+For a multi-index, plug-and-play architecture, see the diagram in `docs/framework_diagram.md`.
+
+## AWS Deployment
+
+See `docs/aws_setup.md` for step-by-step instructions to deploy this repo on an AWS EC2 instance.
+
+## Interview Questions
+
+See `docs/interview_questions.md` for a set of likely questions and suggested answers when explaining this framework.
 
 ## Notes
 
